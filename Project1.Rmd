@@ -1,0 +1,126 @@
+---
+title: "Project 1 : Taylor Swift Album Analysis"
+author: "Kadee Books"
+date: "9/26/2025"
+output: pdf_document
+---
+
+# Getting Started
+## Introduction
+
+In this project, I analyze a dataset of Taylor Swift songs obtained from Spotify. The dataset contains audio features such as energy, loudness, tempo, and valence along with metadata like album, release date, and popularity. I'm looking to find which albums have the highest average popularity and loudness, and if a song is louder does it increase the chances of being popular?
+
+## Importing the Data
+
+Before we can analyze the dataset, we need to load it into R and preview its structure. This step ensures that we understand the variables we are working with and their data types. The dataset includes 582 songs across multiple albums, each with values such as popularity on a scale of 0–100 and loudness which is in decibels. These variables are especially important for this analysis.
+
+```{r }
+spotify <- read.csv("ts_spotify.csv")
+```
+
+## Importing the Libraries
+
+We’re going to need a few different libraries for this project that are all very crucial to the success of this
+project. The first and foremost library that we need is dplyr, which is used for data wrangling and summarizing. It helps us group songs by album, compute average popularity and loudness, and filter the dataset. Without it, these operations would take much more complicated code. Next, is ggplot2 which provides powerful data visualization tools. We use it to create bar charts and scatterplots that clearly show popularity and loudness differences across albums.Lastly, is readr which is used to import the CSV file into R quickly and cleanly. 
+
+```{r setup,}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+library(readr)
+```
+
+# Overview of the Data
+## Summary of Album Data
+
+From this preview, we see that each row corresponds to a single track. The columns provide information such as track name, album, release date, and several numeric audio features. These features will allow us to explore how Taylor Swift’s music varies across albums. This column is not formatted for optimal processing because the computer can not parse the formating of the genre in a useful manner yet.
+
+```{r}
+head(spotify)
+```
+
+# Data Wrangling
+
+The raw datasets often contain extra variables that are not directly relevant to the analysis. Here, I will select only the columns that matter for our question which are album, song name, release date, popularity, and loudness. I'll also extract the release year from the full release date to make it easier to summarize results over time. This step simplifies the dataset and prepares it for analysis.
+
+```{r}
+spotify_clean <- spotify %>%
+  select(album, name, release_date, popularity, loudness) %>%
+  mutate(release_year = as.numeric(substr(release_date, 1, 4)))
+head(spotify_clean)
+```
+
+After extracting the relevant data the dataset is easier to read. Now each row still represents a track, but we have a focused set of variables that connect directly to our research problem.
+
+# Exploratory Data Analysis
+## Average Popularity of Each Album
+
+In this section we will do some exploratory data analysis which will help us identify trends and patterns in the data. First, I will compute the average popularity for each album. This gives us an overview of which eras were most popular overall. By grouping the data by album and taking the mean of popularity, we can compare different albums in a fair way regardless of the number of tracks they contain.
+
+```{r popularity-album, fig.width=8, fig.height=4}
+popularity_album <- spotify_clean %>%
+  group_by(album) %>%
+  summarize(avg_popularity = mean(popularity), .groups = "drop") %>%
+  arrange(desc(avg_popularity))
+
+ggplot(popularity_album, aes(x = reorder(album, avg_popularity), y = avg_popularity)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Average Popularity by Album",
+       x = "Album (treated as Genre)",
+       y = "Average Popularity")
+```
+
+This bar chart shows which albums rank highest in popularity. From the results, we can see that The Tortured Poets Department performed the best with Lover and reputation following closely behind.This chart reflects both fan reception and Spotify’s popularity algorithm.
+
+## Average loudness for Each Album
+
+Next, I will compute the average loudness for each album. Loudness is measured in decibels, with higher values indicating a more intense or powerful sound. This is useful because music production has changed over time, and analyzing loudness reveals how Taylor Swift’s sound evolved across her career.
+
+```{r loudness-album, fig.width=8, fig.height=4}
+loudness_album <- spotify_clean %>%
+  group_by(album) %>%
+  summarize(avg_loudness = mean(loudness), .groups = "drop") %>%
+  arrange(desc(avg_loudness))
+
+ggplot(loudness_album, aes(x = reorder(album, avg_loudness), y = avg_loudness)) +
+  geom_col(fill = "darkred") +
+  coord_flip() +
+  labs(title = "Average Loudness by Album",
+       x = "Album",
+       y = "Average Loudness (dB)")
+```
+
+This visualization shows that the production of Speak Now (Taylors Varsion) is significantly louder than others. Most of her newer albums are less loud compared to her older music. This shows changes in her production choices across different eras.
+
+# Data Visulization
+## Popularity vs. Loudness
+
+Beyond averages, it is helpful to explore the relationship between popularity and loudness at the track level.
+A scatterplot allows us to see whether there is a trend where louder songs also tend to be more popular. Coloring the points by album makes it possible to spot clusters of songs that belong to the same era.
+
+```{r}
+  ggplot(spotify_clean, aes(x = loudness, y = popularity, color = album)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Popularity vs. Loudness of Tracks",
+       x = "Loudness (dB)", y = "Popularity") +
+  theme(legend.position = "none")
+```
+
+From this chart, we can see that most songs cluster in the mid-loudness range but still vary widely in popularity. The relationship between loudness and popularity is not strictly linear, but certain albums contain multiple high-popularity and loud tracks.
+
+# Conclusion
+This project asked: If a song is louder does it increase the chances of being popular??
+
+From the analysis, we found:
+
+The album with the highest average popularity is 
+```{r}
+popularity_album$album[1]
+```
+The album with the highest average loudness is 
+```{r}
+loudness_album$album[1]
+```
+
+Taylor Swift’s musical style has shifted in both sound intensity and audience approval across different albums. Overall, the analysis shows that loudness doesn't increase a songs chances of becoming popular. Popularity is shaped not only by musical features but also by cultural impact and fan reception, while loudness reflects changes in production and style.
