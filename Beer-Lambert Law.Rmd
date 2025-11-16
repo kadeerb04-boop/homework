@@ -1,0 +1,98 @@
+---
+title: "Beer-Lambert Law"
+output: ioslides_presentation
+---
+<style type="text/css">
+body p, div, h1, h2, h3, h4, h5 {
+color: black;
+font-family: Modern Computer Roman;
+}
+slides > slide.title-slide hgroup h1 {
+color: #8C1D40; <!--the maroon color-->
+}
+h2 {
+color: #8C1D40; <!-- the maroon color-->
+}
+</style> <!-- end of defining font in various parts of slides -->
+
+## Overview
+This presentation demonstrates an application of statistics in chemistry, specifically the Beer-Lambert Law. In this presentation we will estimate the linear relationship between concentration and absorbance.
+
+```{r setup, include=TRUE}
+library(ggplot2)
+library(dplyr)
+library(plotly)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+## Simulated calibration data
+Suppose we have a set of standard solutions with known concentrations (in mol/L) and their measured absorbances at a given wavelength.
+
+```{r data-sim, echo=TRUE}
+set.seed(42)
+conc <- seq(0.1, 1.0, by=0.1)
+absorb <- 0.25 + 1.2*conc + rnorm(length(conc), sd=0.05)
+calib <- data.frame(conc, absorb)
+head(calib)
+```
+## Beer-Lambert Law
+The Beer-Lambert Law states:
+
+$$
+A = \varepsilon \, c \, l
+$$
+where:
+- $A$ is absorbance
+- $\varepsilon$ is molar absorptivity
+- $c$ is concentration
+- $l$ is path length (cm)
+
+Calibration is often done using simple linear regression.
+
+## Linear regression model
+We can model absorbance as:
+
+$$
+A_i = \beta_0 + \beta_1 c_i + \varepsilon_i,
+\qquad \varepsilon_i \sim N(0, \sigma^2)
+$$
+
+with estimates:
+
+$$
+\hat{\beta}_0, \hat{\beta}_1 = \arg\min \sum (A_i - (\beta_0+\beta_1 c_i))^2
+$$
+
+## Calibration curve
+```{r gg-scatter, fig.width=4, fig.height=3}
+p1 <- ggplot(calib, aes(x = conc, y = absorb)) +
+geom_point(size = 2) +
+geom_smooth(method = "lm", se = TRUE, color="blue") +
+labs(title = "Calibration Curve", x = "Concentration (mol/L)", 
+y = "Absorbance")
+print(p1)
+```
+
+## Residuals histogram
+```{r gg-resid, fig.width=4, fig.height=3}
+fit <- lm(absorb ~ conc, data = calib)
+resid_df <- data.frame(resid = residuals(fit))
+
+p2 <- ggplot(resid_df, aes(x = resid)) +
+geom_histogram(binwidth = 0.02, boundary = 0, closed = "left") +
+labs(title = "Residuals of calibration model", x = "Residual", y = "Count")
+print(p2)
+```
+
+## 3D interactive plot
+Absorbance may depend on both concentration and wavelength. Below is a simulated 3D plot.
+
+```{r plotly-3d, echo=FALSE}
+wavelength <- rep(seq(400, 700, by=50), each=length(conc))
+conc_long <- rep(conc, times=length(unique(wavelength)))
+absorb3d <- 0.25 + 1.2*conc_long - 0.0005*(wavelength-550)^2 + rnorm(length(conc_long), sd=0.05)
+plot_ly(x = ~conc_long, y = ~wavelength, z = ~absorb3d,
+type = 'scatter3d', mode = 'markers', marker = list(size = 2)) %>%
+layout(scene = list(xaxis = list(title = 'Concentration'),
+yaxis = list(title = 'Wavelength (nm)'),
+zaxis = list(title = 'Absorbance')))
+```
