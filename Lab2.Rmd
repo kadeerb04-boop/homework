@@ -1,0 +1,192 @@
+---
+title: "Lab2"
+author: "Kadee Books"
+date: "9/14/2025"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(ggplot2movies)  
+data(movies)
+```
+
+# Question 1
+## Compute oldest and most recent movie years
+```{r }
+oldest <- min(movies$year, na.rm = TRUE)
+newest <- max(movies$year, na.rm = TRUE)
+
+cat("Oldest movie year:", oldest, "\n")
+cat("Most recent movie year:", newest, "\n")
+```
+
+# Question 2
+## Proportion of movies with and without a budget
+```{r }
+budget <- mean(!is.na(movies$budget))
+no_budget <- mean(is.na(movies$budget))
+budget
+no_budget
+```
+## Top 5 most expensive movies
+```{r }
+movies %>%
+  filter(!is.na(budget)) %>%
+  arrange(desc(budget)) %>%
+  select(title, year, budget) %>%
+  head(5)
+```
+# Question 3
+## Top 5 longest movies
+```{r }
+movies %>%
+  arrange(desc(length)) %>%
+  select(title, year, length) %>%
+  head(5)
+```
+# Question 4
+## Shortest and longest movie
+```{r }
+if ("Short" %in% names(movies)) {
+  short_movies <- movies %>% filter(Short == 1)
+  
+  shortest_short <- short_movies %>% arrange(length) %>% slice(1)
+  longest_short  <- short_movies %>% arrange(desc(length)) %>% slice(1)
+  
+  cat("Shortest short movie:", shortest_short$title, 
+      "(", shortest_short$year, ") -", shortest_short$length, "minutes\n")
+  cat("Longest short movie:", longest_short$title, 
+      "(", longest_short$year, ") -", longest_short$length, "minutes\n")
+}
+```
+# Question 5
+## Movies of each genre in the database
+```{r }
+possible_genres <- c("Action","Animation","Comedy","Drama","Documentary","Romance","Short")
+genres_present <- intersect(possible_genres, names(movies))
+
+genre_counts <- movies %>%
+  select(all_of(genres_present)) %>%
+  summarise(across(everything(), \(x) sum(x, na.rm = TRUE)))
+
+genre_counts_long <- tidyr::pivot_longer(genre_counts, everything(),
+                                         names_to = "genre", values_to = "count")
+
+ggplot(genre_counts_long, aes(x = genre, y = count, fill = genre)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Number of Movies by Genre", y = "Count")
+```
+
+# Question 6
+## Average rating of all movies within each genre
+
+```{r }
+possible_genres <- c("Action","Animation","Comedy","Drama","Documentary","Romance","Short")
+genres_present <- intersect(possible_genres, names(movies))
+
+if (length(genres_present) > 0) {
+  genre_ratings <- movies %>%
+    select(rating, all_of(genres_present)) %>%
+    tidyr::pivot_longer(cols = all_of(genres_present), 
+                        names_to = "genre", values_to = "is_genre") %>%
+    filter(is_genre == 1) %>%
+    group_by(genre) %>%
+    summarise(avg_rating = mean(rating, na.rm = TRUE))
+  
+  ggplot(genre_ratings, aes(x = genre, y = avg_rating, fill = genre)) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    labs(title = "Average Rating by Genre", y = "Average Rating")
+}
+```
+
+# Question 7
+## Average rating of all movies within each genre between 2000-2005
+
+```{r }
+possible_genres <- c("Action","Animation","Comedy","Drama","Documentary","Romance","Short")
+genres_present <- intersect(possible_genres, names(movies))
+
+if (length(genres_present) > 0) {
+  genre_ratings_2000_2005 <- movies %>%
+    filter(year >= 2000 & year <= 2005) %>%
+    select(rating, all_of(genres_present)) %>%
+    tidyr::pivot_longer(cols = all_of(genres_present),
+                        names_to = "genre", values_to = "is_genre") %>%
+    filter(is_genre == 1) %>%
+    group_by(genre) %>%
+    summarise(avg_rating = mean(rating, na.rm = TRUE))
+
+  ggplot(genre_ratings_2000_2005, aes(x = genre, y = avg_rating, fill = genre)) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    labs(title = "Average Rating by Genre (2000–2005)", y = "Average Rating")
+}
+```
+
+# Question 8
+## Number of movies by genre per year (1990–latest year)
+
+```{r }
+possible_genres <- c("Action","Animation","Comedy","Drama","Documentary","Romance")
+genres_present <- intersect(possible_genres, names(movies))
+
+if (length(genres_present) > 0) {
+  movies_1990 <- movies %>%
+    filter(year >= 1990) %>%
+    select(year, all_of(genres_present))
+
+  genre_year <- movies_1990 %>%
+    tidyr::pivot_longer(cols = all_of(genres_present),
+                        names_to = "genre", values_to = "is_genre") %>%
+    filter(is_genre == 1) %>%
+    group_by(year, genre) %>%
+    summarise(count = n(), .groups = "drop")
+
+  ggplot(genre_year, aes(x = year, y = count, color = genre)) +
+    geom_line(linewidth = 1) +
+    theme_minimal() +
+    labs(title = "Number of Movies by Genre (1990–Latest)", y = "Number of Movies")
+}
+```
+
+# Question 9.1
+## The year with highest average rating
+
+```{r }
+avg_rating_by_year <- movies %>%
+  group_by(year) %>%
+  summarise(avg_rating = mean(rating, na.rm = TRUE)) %>%
+  arrange(desc(avg_rating)) %>%
+  slice(1)
+
+cat("Year with highest average rating:", avg_rating_by_year$year,
+    "with rating", round(avg_rating_by_year$avg_rating, 2), "\n")
+```
+
+# Question 9.2
+## Average movie length by year
+
+```{r }
+avg_length_by_year <- movies %>%
+  group_by(year) %>%
+  summarise(avg_length = mean(length, na.rm = TRUE))
+
+ggplot(avg_length_by_year, aes(x = year, y = avg_length)) +
+  geom_line(color = "blue", linewidth = 1) +
+  theme_minimal() +
+  labs(title = "Average Movie Length Over Time", y = "Average Length (minutes)")
+```
+
+# Question 9.3
+## Distribution of IMDB ratings
+
+```{r }
+ggplot(movies, aes(x = rating)) +
+  geom_histogram(binwidth = 0.5, fill = "steelblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of IMDB Ratings", x = "Rating", y = "Count")
+```
